@@ -1,57 +1,106 @@
 # **Finding Lane Lines on the Road** 
-[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
-<img src="examples/laneLines_thirdPass.jpg" width="480" alt="Combined Image" />
+## Writeup Template
 
-Overview
+### You can use this file as a template for your writeup if you want to submit it as a markdown file. But feel free to use some other method and submit a pdf if you prefer.
+
 ---
 
-When we drive, we use our eyes to decide where to go.  The lines on the road that show us where the lanes are act as our constant reference for where to steer the vehicle.  Naturally, one of the first things we would like to do in developing a self-driving car is to automatically detect lane lines using an algorithm.
+**Finding Lane Lines on the Road**
 
-In this project you will detect lane lines in images using Python and OpenCV.  OpenCV means "Open-Source Computer Vision", which is a package that has many useful tools for analyzing images.  
-
-To complete the project, two files will be submitted: a file containing project code and a file containing a brief write up explaining your solution. We have included template files to be used both for the [code](https://github.com/udacity/CarND-LaneLines-P1/blob/master/P1.ipynb) and the [writeup](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md).The code file is called P1.ipynb and the writeup template is writeup_template.md 
-
-To meet specifications in the project, take a look at the requirements in the [project rubric](https://review.udacity.com/#!/rubrics/322/view)
+The goals / steps of this project are the following:
+* Make a pipeline that finds lane lines on the road
+* Reflect on your work in a written report
 
 
-Creating a Great Writeup
----
-For this project, a great writeup should provide a detailed response to the "Reflection" section of the [project rubric](https://review.udacity.com/#!/rubrics/322/view). There are three parts to the reflection:
+[//]: # (Image References)
 
-1. Describe the pipeline
+[image1]: ./examples/hslsolidYellowCurve2.jpg "Grayscale"
 
-2. Identify any shortcomings
-
-3. Suggest possible improvements
-
-We encourage using images in your writeup to demonstrate how your pipeline works.  
-
-All that said, please be concise!  We're not looking for you to write a book here: just a brief description.
-
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup. Here is a link to a [writeup template file](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md). 
-
-
-The Project
 ---
 
-## If you have already installed the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) you should be good to go!   If not, you should install the starter kit to get started on this project. ##
+### Reflection
 
-**Step 1:** Set up the [CarND Term1 Starter Kit](https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/83ec35ee-1e02-48a5-bdb7-d244bd47c2dc/lessons/8c82408b-a217-4d09-b81d-1bda4c6380ef/concepts/4f1870e0-3849-43e4-b670-12e6f2d4b7a7) if you haven't already.
 
-**Step 2:** Open the code in a Jupyter Notebook
+My pipeline consisted of 5 steps. 
+1. Color Selection using below color maps
+    a. HSL conversion
+    b. Grayscale 
+2. Gaussian Blur
+3. Canny Edge detection Algorithm
+4. Hough Transform
+5. Lane extrapolation and lane fitting
 
-You will complete the project code in a Jupyter notebook.  If you are unfamiliar with Jupyter Notebooks, check out <A HREF="https://www.packtpub.com/books/content/basics-jupyter-notebook-and-python" target="_blank">Cyrille Rossant's Basics of Jupyter Notebook and Python</A> to get started.
+### Color Selection
+First, I converted the images to grayscale to decrease the number of channels to work with. But this pipeline doesn't work well for images with non-contrasting backgrounds and lanes with shadows and gray background. In order to deal with this I converted the images to HSL color space.
 
-Jupyter is an Ipython notebook where you can run blocks of code and see results interactively.  All the code for this project is contained in a Jupyter notebook. To start Jupyter in your browser, use terminal to navigate to your project directory and then run the following command at the terminal prompt (be sure you've activated your Python 3 carnd-term1 environment as described in the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) installation instructions!):
+GrayScale Image:
+![alt text](./process_images/graysolidYellowCurve2.jpg)
 
-`> jupyter notebook`
+HSL Image:
+![alt text](./process_images/hslsolidYellowCurve2.jpg)
 
-A browser window will appear showing the contents of the current directory.  Click on the file called "P1.ipynb".  Another browser window will appear displaying the notebook.  Follow the instructions in the notebook to complete the project.  
+In the above image yellow and white lanes are identified very cleary.
+I converted the images from RGB to HLS color space. Now I defined ranges for yellow and white masks. Combined these masks to select white and yellow lanes. 
 
-**Step 3:** Complete the project and submit both the Ipython notebook and the project writeup
+### Gaussian Blur 
+Here I have used a kernel size of 9.
 
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+hlsimage after Gaussian Blurring:
+![alt text](./process_images/blursolidYellowCurve2.jpg)
 
-"# Lane-Finding" 
+### Canny Edge Detection 
+
+Goal is to identify lanes in the above image. For this I have used Canny Edge Detection algorithm.
+Canny Recommended a ratio of 1:2 or 1:3 for low vs high thresholds. After many trail and errors I found that 50:150 as suitable thresholds for this algorithm to detect edges clearly.
+
+HSL Image with Canny Edge detection:
+![alt text](./process_images/edgessolidYellowCurve2.jpg)
+
+In the above images Lanes are identified clearly but there is some unwanted noise also present. In order to remove that noise I have applied Region Of Interest mask to  the images after Canny edge detection.
+
+HSL Image with Edges after Applying Region of Interest:
+![alt text](./process_images/masksolidYellowCurve2.jpg)
+ In the above image edges are identified clearly without any noise.
+ 
+### Hough Transform
+From the detected edges we need to identify Lanes. Hough transform can be used to extract lanes from the edges. The output of Hough transform is a vector of line segments in the form of (x1,y1,x2,y2) as endpoints as shown in the below figure. 
+Note: In the given helper functions pipeline I've modified the Houghlines function as it will return lines from Hough transform.
+
+Hough Line Points:
+![alt text](./process_images/houghsolidYellowCurve2.jpg)
+
+### Lane Extrapolation and Lane Fitting
+Hough transform gives to a vector of line segments (x1,y1,x2,y2) as endpoints.
+I regrouped these points as left lane and right lane by finding the slopes.
+Finally I fitted two lanes(left lane and right lane) by using numpy.polyfit function which returns the slope and intercepts of left and right fitted lanes. 
+I've defined ymax and ymin to be in the middle of the image. From thes y points I calculated the xmin and xmax points for both left and right lanes.
+From these x and y coordiantes I plotted a line using openCV function cv2.line()
+
+Finally I draw these lines on the original image using cv2.addWeighted() function.
+
+Images with detected lanes:
+
+"SolidYellowCurve2"![alt text](./test_images_output/solidYellowCurve2.jpg)
+
+"SolidWhiteCurve"![alt text](./test_images_output/solidWhiteCurve.jpg)
+
+"SolidWhiteRight"![alt text](./test_images_output/solidWhiteRight.jpg)
+
+"SolidYellowCurve"![alt text](./test_images_output/solidYellowCurve.jpg) 
+
+"SolidYellowLeft"![alt text](./test_images_output/solidYellowLeft.jpg) 
+
+"WhiteCarLaneSwitch"![alt text](./test_images_output/whiteCarLaneSwitch.jpg) 
+
+
+Finally I used this pipeline to work on images. Now my pipelines clearly identifies and annotates the lanes in the three given test videos.
+
+### 2. shortcomings and Improvements
+
+There are some shortcomings since this pipeline will not work correctly for Steep roads and Lanes that are not Yellow and white. There are some jitters found the video. In order to overcome these jitters we can use deque method to limit and avergae the lane lines. I am still working on imorovements to this pipeline.
+
+
+
+
+
